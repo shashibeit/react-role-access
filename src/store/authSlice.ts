@@ -1,11 +1,11 @@
 /**
  * Auth Slice
  * Redux slice for authentication and authorization state management
+ * Built-in mock authentication - simplified local state only
  */
 
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { AuthResponse, LoginRequest, AuthPermissions } from '../types/api';
-import { apiPost, apiGet } from '../utils/api';
+import { createSlice } from '@reduxjs/toolkit';
+import { AuthPermissions } from '../types/api';
 
 /**
  * Mock user data for development
@@ -31,6 +31,24 @@ const MOCK_PERMISSIONS: AuthPermissions = {
   viewMessage: 'true',
   editSendMessage: 'true',
 };
+
+/**
+ * Mock login API response
+ * Simulates: POST /auth/login
+ */
+const getMockLoginResponse = () => ({
+  user: MOCK_USER,
+  permissions: MOCK_PERMISSIONS,
+});
+
+/**
+ * Mock get current user API response
+ * Simulates: GET /auth/me
+ */
+const getMockCurrentUserResponse = () => ({
+  user: MOCK_USER,
+  permissions: MOCK_PERMISSIONS,
+});
 
 /**
  * Auth state interface
@@ -60,60 +78,26 @@ const initialState: AuthState = {
 };
 
 /**
- * Async thunk for login
- * TODO: Replace with actual API endpoint
- */
-export const loginUser = createAsyncThunk(
-  'auth/loginUser',
-  async (credentials: LoginRequest, { rejectWithValue }) => {
-    try {
-      const response = await apiPost<AuthResponse>('/auth/login', credentials);
-      return response;
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
-  }
-);
-
-/**
- * Async thunk for fetching current user
- * TODO: Replace with actual API endpoint
- */
-export const fetchCurrentUser = createAsyncThunk(
-  'auth/fetchCurrentUser',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await apiGet<AuthResponse>('/auth/me');
-      return response;
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
-  }
-);
-
-/**
- * Async thunk for logout
- * TODO: Replace with actual API endpoint
- */
-export const logoutUser = createAsyncThunk(
-  'auth/logoutUser',
-  async (_, { rejectWithValue }) => {
-    try {
-      await apiPost('/auth/logout', {});
-      return null;
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
-  }
-);
-
-/**
  * Auth Slice
  */
 export const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
+    /**
+     * Set loading state
+     */
+    setLoading: (state, action) => {
+      state.loading = action.payload;
+    },
+
+    /**
+     * Set error message
+     */
+    setError: (state, action) => {
+      state.error = action.payload;
+    },
+
     /**
      * Clear auth error
      */
@@ -129,70 +113,59 @@ export const authSlice = createSlice({
       state.permissions = null;
       state.isAuthenticated = false;
     },
-  },
-
-  extraReducers: (builder) => {
-    /**
-     * Login user handlers
-     */
-    builder
-      .addCase(loginUser.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(loginUser.fulfilled, (state, action) => {
-        state.loading = false;
-        state.user = action.payload.user;
-        state.permissions = action.payload.permissions;
-        state.isAuthenticated = true;
-      })
-      .addCase(loginUser.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-        state.isAuthenticated = false;
-      });
 
     /**
-     * Fetch current user handlers
+     * Placeholder: Login handler
+     * Mocks API call: POST /auth/login
+     * Returns: { user, permissions }
      */
-    builder
-      .addCase(fetchCurrentUser.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchCurrentUser.fulfilled, (state, action) => {
-        state.loading = false;
-        state.user = action.payload.user;
-        state.permissions = action.payload.permissions;
-        state.isAuthenticated = true;
-      })
-      .addCase(fetchCurrentUser.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-        state.isAuthenticated = false;
-      });
+    loginHandler: (state) => {
+      const mockResponse = getMockLoginResponse();
+      state.user = mockResponse.user;
+      state.permissions = mockResponse.permissions;
+      state.isAuthenticated = true;
+      state.loading = false;
+      state.error = null;
+    },
 
     /**
-     * Logout user handlers
+     * Placeholder: Logout handler
+     * Mocks API call: POST /auth/logout
+     * Returns: { success: true }
      */
-    builder
-      .addCase(logoutUser.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(logoutUser.fulfilled, (state) => {
-        state.loading = false;
-        state.user = null;
-        state.permissions = null;
-        state.isAuthenticated = false;
-      })
-      .addCase(logoutUser.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      });
+    logoutHandler: (state) => {
+      // Mock API response: { success: true }
+      state.user = null;
+      state.permissions = null;
+      state.isAuthenticated = false;
+      state.loading = false;
+      state.error = null;
+    },
+
+    /**
+     * Placeholder: Get current user handler
+     * Mocks API call: GET /auth/me
+     * Returns: { user, permissions }
+     */
+    getCurrentUserHandler: (state) => {
+      const mockResponse = getMockCurrentUserResponse();
+      state.user = mockResponse.user;
+      state.permissions = mockResponse.permissions;
+      state.isAuthenticated = true;
+      state.loading = false;
+    },
   },
 });
 
-export const { clearError, clearAuth } = authSlice.actions;
+export const { 
+  setLoading, 
+  setError, 
+  clearError, 
+  clearAuth,
+  loginHandler,
+  logoutHandler,
+  getCurrentUserHandler,
+} = authSlice.actions;
 export const authReducer = authSlice.reducer;
 
 /**

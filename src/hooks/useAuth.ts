@@ -1,6 +1,7 @@
 /**
  * useAuth Hook
  * Custom hook for accessing auth state and actions
+ * Simplified local state management without API calls
  */
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -11,12 +12,9 @@ import {
   selectPermissions,
   selectAuthLoading,
   selectAuthError,
-  loginUser,
-  logoutUser,
-  fetchCurrentUser,
   clearError,
 } from '../store/authSlice';
-import { LoginRequest, AuthPermissions } from '../types/api';
+import { AuthPermissions } from '../types/api';
 
 /**
  * useAuth hook
@@ -30,18 +28,6 @@ export function useAuth() {
   const permissions = useSelector(selectPermissions);
   const loading = useSelector(selectAuthLoading);
   const error = useSelector(selectAuthError);
-
-  const login = (credentials: LoginRequest) => {
-    return dispatch(loginUser(credentials));
-  };
-
-  const logout = () => {
-    return dispatch(logoutUser());
-  };
-
-  const getCurrentUser = () => {
-    return dispatch(fetchCurrentUser());
-  };
 
   const handleClearError = () => {
     dispatch(clearError());
@@ -65,19 +51,12 @@ export function useAuth() {
     error,
 
     // Actions
-    login,
-    logout,
-    getCurrentUser,
     clearError: handleClearError,
 
     // Utilities
     hasPermission,
   };
 }
-
-/**
- * Custom hook for accessing only permissions
- */
 export function usePermissions() {
   const permissions = useSelector(selectPermissions);
 
