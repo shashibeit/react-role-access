@@ -18,13 +18,9 @@ import './index.css';
  */
 if (process.env.NODE_ENV === 'development') {
   const { makeServer } = await import('./mocks/server');
-  const { initializeDevelopmentAuth } = await import('./mocks/devAuth');
 
   makeServer({ environment: 'development' });
   console.log('[Development] Mirage JS mock server started');
-
-  // Auto-authenticate user in development
-  initializeDevelopmentAuth();
 }
 
 /**

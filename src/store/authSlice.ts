@@ -3,9 +3,34 @@
  * Redux slice for authentication and authorization state management
  */
 
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { AuthResponse, LoginRequest, AuthPermissions } from '../types/api';
 import { apiPost, apiGet } from '../utils/api';
+
+/**
+ * Mock user data for development
+ */
+const MOCK_USER = {
+  id: '1',
+  email: 'admin@example.com',
+  name: 'Admin User',
+};
+
+const MOCK_PERMISSIONS: AuthPermissions = {
+  roleName: 'Admin',
+  viewAllQuestions: 'true',
+  viewQuestionSectionOrder: 'true',
+  createNewQuestion: 'true',
+  editQuestion: 'true',
+  viewWorkflowTask: 'true',
+  viewPendingChanges: 'true',
+  viewParticipantInfo: 'true',
+  viewParticipantQuestionnaire: 'true',
+  createQuestionnaire: 'true',
+  editEmail: 'true',
+  viewMessage: 'true',
+  editSendMessage: 'true',
+};
 
 /**
  * Auth state interface
@@ -17,7 +42,6 @@ interface AuthState {
     name: string;
   } | null;
   permissions: AuthPermissions | null;
-  token: string | null;
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
@@ -25,43 +49,15 @@ interface AuthState {
 
 /**
  * Initial state
- * Restores auth data from localStorage on app startup
+ * Sets up mock authentication automatically
  */
-const getInitialState = (): AuthState => {
-  const token = localStorage.getItem('authToken');
-  const userJson = localStorage.getItem('authUser');
-  const permissionsJson = localStorage.getItem('authPermissions');
-
-  let user = null;
-  let permissions = null;
-
-  if (userJson) {
-    try {
-      user = JSON.parse(userJson);
-    } catch (e) {
-      console.error('Failed to parse stored user:', e);
-    }
-  }
-
-  if (permissionsJson) {
-    try {
-      permissions = JSON.parse(permissionsJson);
-    } catch (e) {
-      console.error('Failed to parse stored permissions:', e);
-    }
-  }
-
-  return {
-    user,
-    permissions,
-    token,
-    loading: false,
-    error: null,
-    isAuthenticated: !!token,
-  };
+const initialState: AuthState = {
+  user: MOCK_USER,
+  permissions: MOCK_PERMISSIONS,
+  loading: false,
+  error: null,
+  isAuthenticated: true,
 };
-
-const initialState: AuthState = getInitialState();
 
 /**
  * Async thunk for login
@@ -126,22 +122,12 @@ export const authSlice = createSlice({
     },
 
     /**
-     * Set token manually (for testing)
-     */
-    setToken: (state, action: PayloadAction<string>) => {
-      state.token = action.payload;
-      localStorage.setItem('authToken', action.payload);
-    },
-
-    /**
      * Clear auth state
      */
     clearAuth: (state) => {
       state.user = null;
       state.permissions = null;
-      state.token = null;
       state.isAuthenticated = false;
-      localStorage.removeItem('authToken');
     },
   },
 
@@ -158,14 +144,7 @@ export const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.permissions = action.payload.permissions;
-        state.token = action.payload.token;
         state.isAuthenticated = true;
-        localStorage.setItem('authToken', action.payload.token);
-        localStorage.setItem('authUser', JSON.stringify(action.payload.user));
-        localStorage.setItem(
-          'authPermissions',
-          JSON.stringify(action.payload.permissions)
-        );
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -186,11 +165,6 @@ export const authSlice = createSlice({
         state.user = action.payload.user;
         state.permissions = action.payload.permissions;
         state.isAuthenticated = true;
-        localStorage.setItem('authUser', JSON.stringify(action.payload.user));
-        localStorage.setItem(
-          'authPermissions',
-          JSON.stringify(action.payload.permissions)
-        );
       })
       .addCase(fetchCurrentUser.rejected, (state, action) => {
         state.loading = false;
@@ -209,11 +183,7 @@ export const authSlice = createSlice({
         state.loading = false;
         state.user = null;
         state.permissions = null;
-        state.token = null;
         state.isAuthenticated = false;
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('authUser');
-        localStorage.removeItem('authPermissions');
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.loading = false;
@@ -222,7 +192,7 @@ export const authSlice = createSlice({
   },
 });
 
-export const { clearError, setToken, clearAuth } = authSlice.actions;
+export const { clearError, clearAuth } = authSlice.actions;
 export const authReducer = authSlice.reducer;
 
 /**
@@ -236,4 +206,3 @@ export const selectPermissions = (state: { auth: AuthState }) =>
 export const selectAuthLoading = (state: { auth: AuthState }) =>
   state.auth.loading;
 export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
-export const selectAuthToken = (state: { auth: AuthState }) => state.auth.token;
