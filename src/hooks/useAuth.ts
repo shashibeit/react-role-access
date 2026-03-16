@@ -13,8 +13,12 @@ import {
   selectAuthLoading,
   selectAuthError,
   clearError,
+  loginHandler,
+  logoutHandler,
+  getCurrentUserHandler,
+  setLoading,
 } from '../store/authSlice';
-import { AuthPermissions } from '../types/api';
+import { AuthPermissions, LoginRequest } from '../types/api';
 
 /**
  * useAuth hook
@@ -31,6 +35,31 @@ export function useAuth() {
 
   const handleClearError = () => {
     dispatch(clearError());
+  };
+
+  /**
+   * Dispatch login handler (mocks API: POST /auth/login)
+   * TODO: Replace with actual API call when backend is ready
+   */
+  const login = (_credentials: LoginRequest) => {
+    dispatch(setLoading(true));
+    dispatch(loginHandler());
+  };
+
+  /**
+   * Dispatch logout handler (mocks API: POST /auth/logout)
+   */
+  const logout = () => {
+    dispatch(setLoading(true));
+    dispatch(logoutHandler());
+  };
+
+  /**
+   * Dispatch get current user handler (mocks API: GET /auth/me)
+   */
+  const getCurrentUser = () => {
+    dispatch(setLoading(true));
+    dispatch(getCurrentUserHandler());
   };
 
   /**
@@ -51,6 +80,9 @@ export function useAuth() {
     error,
 
     // Actions
+    login,
+    logout,
+    getCurrentUser,
     clearError: handleClearError,
 
     // Utilities
