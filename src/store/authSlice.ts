@@ -1,63 +1,21 @@
 /**
  * Auth Slice
  * Redux slice for authentication and authorization state management
- * Built-in mock authentication - simplified local state only
+ * Handles auth initialization from cookies and API calls
  */
 
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { AuthPermissions } from '../types/api';
-
-/**
- * Mock user data for development
- */
-const MOCK_USER = {
-  id: '1',
-  email: 'admin@example.com',
-  name: 'Admin User',
-};
-
-const MOCK_PERMISSIONS: AuthPermissions = {
-  roleName: 'Admin',
-  viewAllQuestions: 'true',
-  viewQuestionSectionOrder: 'true',
-  createNewQuestion: 'true',
-  editQuestion: 'true',
-  viewWorkflowTask: 'true',
-  viewPendingChanges: 'true',
-  viewParticipantInfo: 'true',
-  viewParticipantQuestionnaire: 'true',
-  createQuestionnaire: 'true',
-  editEmail: 'true',
-  viewMessage: 'true',
-  editSendMessage: 'true',
-};
-
-/**
- * Mock login API response
- * Simulates: POST /auth/login
- */
-const getMockLoginResponse = () => ({
-  user: MOCK_USER,
-  permissions: MOCK_PERMISSIONS,
-});
-
-/**
- * Mock get current user API response
- * Simulates: GET /auth/me
- */
-const getMockCurrentUserResponse = () => ({
-  user: MOCK_USER,
-  permissions: MOCK_PERMISSIONS,
-});
+import { MOCK_USER, MOCK_PERMISSIONS } from '../mocks/mockData';
+import { getAuthDataFromCookies, parseCCLVLRoles, storeSessionKey } from '../utils/cookieUtils';
 
 /**
  * Auth state interface
  */
 interface AuthState {
   user: {
-    id: string;
-    email: string;
-    name: string;
+    userKey: string;
+    sessionId: string;
   } | null;
   permissions: AuthPermissions | null;
   loading: boolean;
@@ -76,6 +34,63 @@ const initialState: AuthState = {
   error: null,
   isAuthenticated: true,
 };
+
+/**
+ * Async thunk for initializing auth from cookies
+ * Called on app mount to handle redirect from auth portal
+ */
+export const initializeAuthFromCookies = createAsyncThunk(
+  'auth/initializeAuthFromCookies',
+  async (_, { rejectWithValue }) => {
+    try {
+      const authData = getAuthDataFromCookies();
+
+      // Check if auth data exists in cookies
+      if (!authData.userKey || !authData.sessionKey) {
+        console.log('[Auth] No cookie data found');
+        return null;
+      }
+
+      console.log('[Auth] Found redirect data:', {
+        userKey: authData.userKey,
+        sessionId: authData.sessionKey,
+      });
+
+      // Parse roles from CCLVL
+      const roles = parseCCLVLRoles(authData.cclvl || '');
+      console.log('[Auth] Parsed roles:', roles);
+
+      // Store session key in sessionStorage
+      storeSessionKey(authData.sessionKey);
+      console.log('[Auth] Session key stored in sessionStorage');
+
+      // Call getAccessRoleAPI to fetch permissions
+      const response = await fetch('/api/auth/getAccessRole', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userKey: authData.userKey,
+          sessionKey: authData.sessionKey,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('[Auth API] Error response:', response.status);
+        return rejectWithValue('Failed to fetch permissions');
+      }
+
+      const data = await response.json();
+      console.log('[Auth API] Permissions received:', data);
+
+      return data;
+    } catch (error) {
+      console.error('[Auth] Error initializing auth from cookies:', error);
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
 
 /**
  * Auth Slice
@@ -115,45 +130,53 @@ export const authSlice = createSlice({
     },
 
     /**
-     * Placeholder: Login handler
-     * Mocks API call: POST /auth/login
-     * Returns: { user, permissions }
-     */
-    loginHandler: (state) => {
-      const mockResponse = getMockLoginResponse();
-      state.user = mockResponse.user;
-      state.permissions = mockResponse.permissions;
-      state.isAuthenticated = true;
-      state.loading = false;
-      state.error = null;
-    },
-
-    /**
-     * Placeholder: Logout handler
-     * Mocks API call: POST /auth/logout
-     * Returns: { success: true }
+     * Logout handler
+     * Clears all auth data
      */
     logoutHandler: (state) => {
-      // Mock API response: { success: true }
       state.user = null;
       state.permissions = null;
       state.isAuthenticated = false;
       state.loading = false;
       state.error = null;
     },
+  },
 
-    /**
-     * Placeholder: Get current user handler
-     * Mocks API call: GET /auth/me
-     * Returns: { user, permissions }
-     */
-    getCurrentUserHandler: (state) => {
-      const mockResponse = getMockCurrentUserResponse();
-      state.user = mockResponse.user;
-      state.permissions = mockResponse.permissions;
-      state.isAuthenticated = true;
-      state.loading = false;
-    },
+  /**
+   * Extra reducers for async thunks
+   */
+  extraReducers: (builder) => {
+    builder
+      // Handle initializeAuthFromCookies pending
+      .addCase(initializeAuthFromCookies.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      // Handle initializeAuthFromCookies fulfilled
+      .addCase(initializeAuthFromCookies.fulfilled, (state, action) => {
+        state.loading = false;
+        
+        if (action.payload) {
+          // Successfully fetched permissions from API
+          state.user = action.payload.user;
+          state.permissions = action.payload.permissions;
+          state.isAuthenticated = true;
+        } else {
+          // No cookies found, use mock data
+          state.user = MOCK_USER;
+          state.permissions = MOCK_PERMISSIONS;
+          state.isAuthenticated = true;
+        }
+      })
+      // Handle initializeAuthFromCookies rejected
+      .addCase(initializeAuthFromCookies.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+        // Fallback to mock data on error
+        state.user = MOCK_USER;
+        state.permissions = MOCK_PERMISSIONS;
+        state.isAuthenticated = true;
+      });
   },
 });
 
@@ -162,9 +185,7 @@ export const {
   setError, 
   clearError, 
   clearAuth,
-  loginHandler,
   logoutHandler,
-  getCurrentUserHandler,
 } = authSlice.actions;
 export const authReducer = authSlice.reducer;
 
@@ -178,4 +199,5 @@ export const selectPermissions = (state: { auth: AuthState }) =>
   state.auth.permissions;
 export const selectAuthLoading = (state: { auth: AuthState }) =>
   state.auth.loading;
-export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
+export const selectAuthError = (state: { auth: AuthState }) =>
+  state.auth.error;

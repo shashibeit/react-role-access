@@ -58,23 +58,16 @@ export const ExampleAuthComponent: React.FC = () => {
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  Name:
+                  User Key:
                 </Typography>
-                <Typography variant="body2">{user.name}</Typography>
+                <Typography variant="body2">{user.userKey}</Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  Email:
+                  Session ID:
                 </Typography>
-                <Typography variant="body2">{user.email}</Typography>
-              </Box>
-
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  User ID:
-                </Typography>
-                <Typography variant="body2">{user.id}</Typography>
+                <Typography variant="body2">{user.sessionId}</Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>

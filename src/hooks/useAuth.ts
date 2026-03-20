@@ -13,12 +13,9 @@ import {
   selectAuthLoading,
   selectAuthError,
   clearError,
-  loginHandler,
   logoutHandler,
-  getCurrentUserHandler,
-  setLoading,
 } from '../store/authSlice';
-import { AuthPermissions, LoginRequest } from '../types/api';
+import { AuthPermissions } from '../types/api';
 
 /**
  * useAuth hook
@@ -38,28 +35,13 @@ export function useAuth() {
   };
 
   /**
-   * Dispatch login handler (mocks API: POST /auth/login)
-   * TODO: Replace with actual API call when backend is ready
-   */
-  const login = (_credentials: LoginRequest) => {
-    dispatch(setLoading(true));
-    dispatch(loginHandler());
-  };
-
-  /**
-   * Dispatch logout handler (mocks API: POST /auth/logout)
+   * Dispatch logout handler
+   * Clears all auth data and sessionStorage
    */
   const logout = () => {
-    dispatch(setLoading(true));
     dispatch(logoutHandler());
-  };
-
-  /**
-   * Dispatch get current user handler (mocks API: GET /auth/me)
-   */
-  const getCurrentUser = () => {
-    dispatch(setLoading(true));
-    dispatch(getCurrentUserHandler());
+    // Clear sessionStorage
+    sessionStorage.removeItem('MSC_SESSION');
   };
 
   /**
@@ -80,9 +62,7 @@ export function useAuth() {
     error,
 
     // Actions
-    login,
     logout,
-    getCurrentUser,
     clearError: handleClearError,
 
     // Utilities
@@ -92,7 +72,7 @@ export function useAuth() {
 export function usePermissions() {
   const permissions = useSelector(selectPermissions);
 
-  const hasPermission = (permissionKey: keyof typeof permissions): boolean => {
+  const hasPermission = (permissionKey: keyof AuthPermissions): boolean => {
     if (!permissions) return false;
     const permission = permissions[permissionKey];
     return permission === 'true';

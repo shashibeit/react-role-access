@@ -1,35 +1,11 @@
 /**
  * Mirage JS API Handlers
  * Define all mock API endpoints here
+ * Mock data imported from shared mockData.ts file
  */
 
 import { Server } from 'miragejs';
-
-/**
- * Mock user data constant
- * Used across all auth endpoints for consistency
- */
-const MOCK_USER = {
-  id: '1',
-  email: 'developer@example.com',
-  name: 'Developer User',
-};
-
-const MOCK_PERMISSIONS = {
-  roleName: 'FRC_DEV_PSOR_DUE_DIL_MGR',
-  viewAllQuestions: 'true',
-  viewQuestionSectionOrder: null,
-  createNewQuestion: 'true',
-  editQuestion: 'true',
-  viewWorkflowTask: null,
-  viewPendingChanges: null,
-  viewParticipantInfo: 'true',
-  viewParticipantQuestionnaire: 'true',
-  createQuestionnaire: 'true',
-  editEmail: 'true',
-  viewMessage: 'true',
-  editSendMessage: 'true',
-};
+import { getMockCurrentUserResponse, getMockLogoutResponse } from './mockData';
 
 /**
  * Setup all API route handlers
@@ -74,28 +50,20 @@ export function setupRoutes(server: Server) {
   /**
    * AUTHENTICATION ENDPOINTS
    */
-  server.post('/auth/login', () => {
-    // Mock login response with permissions
-    return {
-      user: MOCK_USER,
-      permissions: MOCK_PERMISSIONS,
-      token: 'mock-jwt-token-' + Date.now(),
-    };
-  });
-
   server.post('/auth/logout', () => {
-    return {
-      success: true,
-      message: 'Logged out successfully',
-    };
+    return getMockLogoutResponse();
   });
 
   server.get('/auth/me', () => {
-    // Get current user and permissions
-    return {
-      user: MOCK_USER,
-      permissions: MOCK_PERMISSIONS,
-    };
+    // Get current user and permissions from shared mockData
+    return getMockCurrentUserResponse();
+  });
+
+  server.post('/auth/getAccessRole', () => {
+    // Get access role/permissions based on session key
+    // Called when user is redirected from auth portal with MSC_SESSION
+    // Returns permissions mapped to this app
+    return getMockCurrentUserResponse();
   });
 
   /**
