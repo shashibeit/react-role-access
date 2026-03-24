@@ -1,104 +1,122 @@
 /**
  * PendingChangesPage
  * Displays pending changes to questions that need approval or review
+ * 
+ * Features:
+ * - View new proposed questions
+ * - Side-by-side comparison of modified questions
+ * - Field-level change highlighting
+ * - Approve/Reject workflow with comments
+ * - Status tracking and filtering
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
   CardContent,
   Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
+  Stack,
+  Tabs,
+  Tab,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
 import QuestionBankTabs from '../../components/questionBank/QuestionBankTabs';
+import PendingChangeCard from '../../components/questionBank/PendingChangeCard';
+import {
+  PendingQuestionChange,
+  ChangeType,
+} from '../../types/pendingChanges';
+import { MOCK_PENDING_CHANGES } from '../../mocks/pendingChangesData';
 
-interface QuestionBankTabsProps {
-  // Reserved for future props
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
 }
 
-interface PendingChange {
-  id: number;
-  questionId: number;
-  title: string;
-  changeType: 'Modified' | 'Deleted' | 'Added';
-  changedBy: string;
-  changedDate: string;
+/**
+ * TabPanel component for displaying tab content
+ */
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index } = props;
+
+  return (
+    <div hidden={value !== index}>
+      {value === index && <Box sx={{ pt: 2 }}>{children}</Box>}
+    </div>
+  );
 }
 
 /**
  * PendingChangesPage displays all pending changes/modifications
- * Users can review and approve/reject changes
+ * Users can review and approve/reject changes with detailed comparison views
  */
-export const PendingChangesPage: React.FC<QuestionBankTabsProps> = () => {
-  // TODO: Replace with actual API integration
-  // TODO: Implement approval workflow
-  // TODO: Add difference/comparison view for modified questions
-  // TODO: Add bulk approve/reject functionality
-  // TODO: Add filters by change type and status
-  // TODO: Integrate with state management for change tracking
+export const PendingChangesPage: React.FC = () => {
+  const [tabValue, setTabValue] = useState(0);
+  const [pendingChanges, setPendingChanges] = useState<PendingQuestionChange[]>(MOCK_PENDING_CHANGES);
+  const [loadingChangeId, setLoadingChangeId] = useState<string | null>(null);
 
-  const mockPendingChanges: PendingChange[] = [
-    {
-      id: 1,
-      questionId: 1,
-      title: 'What is React? (Updated)',
-      changeType: 'Modified',
-      changedBy: 'John Doe',
-      changedDate: '2026-03-09',
-    },
-    {
-      id: 2,
-      questionId: 5,
-      title: 'New Question: Vue.js Basics',
-      changeType: 'Added',
-      changedBy: 'Jane Smith',
-      changedDate: '2026-03-10',
-    },
-    {
-      id: 3,
-      questionId: 3,
-      title: 'TypeScript generics explained',
-      changeType: 'Deleted',
-      changedBy: 'Bob Johnson',
-      changedDate: '2026-03-08',
-    },
-  ];
+  // Get changes by status
+  const pendingOnlyChanges = pendingChanges.filter((c) => c.status === 'PENDING');
+  const approvedChanges = pendingChanges.filter((c) => c.status === 'APPROVED');
+  const rejectedChanges = pendingChanges.filter((c) => c.status === 'REJECTED');
 
-  const handleApprove = (changeId: number): void => {
-    // TODO: Implement approve functionality with API call
-    console.log(`Approve change ${changeId}`);
+  // Handle tab change
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
   };
 
-  const handleReject = (changeId: number): void => {
-    // TODO: Implement reject functionality with confirmation dialog
-    console.log(`Reject change ${changeId}`);
+  // Handle approve action
+  const handleApprove = (changeId: string, notes?: string) => {
+    setLoadingChangeId(changeId);
+
+    // Simulate API delay
+    setTimeout(() => {
+      setPendingChanges((prevChanges) =>
+        prevChanges.map((change) =>
+          change.changeId === changeId
+            ? {
+                ...change,
+                status: 'APPROVED',
+                approvalNotes: notes || 'Approved',
+              }
+            : change
+        )
+      );
+      setLoadingChangeId(null);
+    }, 500);
   };
 
-  const getChangeTypeColor = (
-    changeType: 'Modified' | 'Deleted' | 'Added'
-  ): 'default' | 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success' => {
-    switch (changeType) {
-      case 'Added':
-        return 'success';
-      case 'Modified':
-        return 'info';
-      case 'Deleted':
-        return 'error';
-      default:
-        return 'default';
-    }
+  // Handle reject action
+  const handleReject = (changeId: string, reason?: string) => {
+    setLoadingChangeId(changeId);
+
+    // Simulate API delay
+    setTimeout(() => {
+      setPendingChanges((prevChanges) =>
+        prevChanges.map((change) =>
+          change.changeId === changeId
+            ? {
+                ...change,
+                status: 'REJECTED',
+                approvalNotes: reason || 'Rejected',
+              }
+            : change
+        )
+      );
+      setLoadingChangeId(null);
+    }, 500);
   };
+
+  // Count by change type
+  const newQuestionsCount = pendingOnlyChanges.filter(
+    (c) => c.changeType === ChangeType.NEW
+  ).length;
+  const modifiedQuestionsCount = pendingOnlyChanges.filter(
+    (c) => c.changeType === ChangeType.MODIFIED
+  ).length;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -114,152 +132,150 @@ export const PendingChangesPage: React.FC<QuestionBankTabsProps> = () => {
         }}
       >
         <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
-          Pending Changes
+          Pending Changes Review
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            color="error"
-            onClick={() => console.log('Reject all')}
-          >
-            Reject All
-          </Button>
-          <Button
-            variant="contained"
-            sx={{
-              backgroundColor: '#4caf50',
-              '&:hover': {
-                backgroundColor: '#45a049',
-              },
-            }}
-            onClick={() => console.log('Approve all')}
-          >
-            Approve All
-          </Button>
-        </Box>
       </Box>
 
       {/* Status Summary Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
         <Card sx={{ boxShadow: 1 }}>
-          <CardContent sx={{ textAlign: 'center' }}>
-            <Typography color="textSecondary" gutterBottom>
-              Total Pending
+          <CardContent sx={{ textAlign: 'center', pb: '16px !important' }}>
+            <Typography color="textSecondary" gutterBottom variant="body2">
+              Pending Changes
             </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 600 }}>
-              {mockPendingChanges.length}
+            <Typography variant="h4" sx={{ fontWeight: 600, color: '#ff9800' }}>
+              {pendingOnlyChanges.length}
             </Typography>
           </CardContent>
         </Card>
+
         <Card sx={{ boxShadow: 1 }}>
-          <CardContent sx={{ textAlign: 'center' }}>
-            <Typography color="textSecondary" gutterBottom>
-              Modifications
-            </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>
-              {mockPendingChanges.filter((c) => c.changeType === 'Modified')
-                .length}
-            </Typography>
-          </CardContent>
-        </Card>
-        <Card sx={{ boxShadow: 1 }}>
-          <CardContent sx={{ textAlign: 'center' }}>
-            <Typography color="textSecondary" gutterBottom>
+          <CardContent sx={{ textAlign: 'center', pb: '16px !important' }}>
+            <Typography color="textSecondary" gutterBottom variant="body2">
               New Questions
             </Typography>
             <Typography variant="h4" sx={{ fontWeight: 600, color: '#4caf50' }}>
-              {mockPendingChanges.filter((c) => c.changeType === 'Added').length}
+              {newQuestionsCount}
+            </Typography>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ boxShadow: 1 }}>
+          <CardContent sx={{ textAlign: 'center', pb: '16px !important' }}>
+            <Typography color="textSecondary" gutterBottom variant="body2">
+              Modified Questions
+            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>
+              {modifiedQuestionsCount}
+            </Typography>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ boxShadow: 1 }}>
+          <CardContent sx={{ textAlign: 'center', pb: '16px !important' }}>
+            <Typography color="textSecondary" gutterBottom variant="body2">
+              Approved
+            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 600, color: '#66bb6a' }}>
+              {approvedChanges.length}
             </Typography>
           </CardContent>
         </Card>
       </Box>
 
-      {/* Pending Changes Table */}
+      {/* Tab Navigation */}
       <Card sx={{ boxShadow: 1 }}>
-        <CardContent sx={{ p: 0 }}>
-          <TableContainer component={Paper} elevation={0}>
-            <Table
-              sx={{
-                minWidth: 700,
-                '& .MuiTableHead-root': {
-                  backgroundColor: '#f5f5f5',
-                },
-              }}
-            >
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Title</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Changed By</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {mockPendingChanges.map((change) => (
-                  <TableRow
-                    key={change.id}
-                    sx={{
-                      '&:hover': {
-                        backgroundColor: '#f9f9f9',
-                      },
-                    }}
-                  >
-                    <TableCell>{change.id}</TableCell>
-                    <TableCell>{change.title}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={change.changeType}
-                        color={getChangeTypeColor(change.changeType)}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>{change.changedBy}</TableCell>
-                    <TableCell>{change.changedDate}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button
-                          size="small"
-                          variant="text"
-                          startIcon={<CheckCircleIcon />}
-                          onClick={() => handleApprove(change.id)}
-                          sx={{ color: '#4caf50' }}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="text"
-                          startIcon={<CancelIcon />}
-                          onClick={() => handleReject(change.id)}
-                          sx={{ color: '#f44336' }}
-                        >
-                          Reject
-                        </Button>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={tabValue} onChange={handleTabChange} aria-label="pending changes tabs">
+            <Tab label={`Pending (${pendingOnlyChanges.length})`} />
+            <Tab label={`Approved (${approvedChanges.length})`} />
+            <Tab label={`Rejected (${rejectedChanges.length})`} />
+          </Tabs>
+        </Box>
+
+        {/* Pending Changes Tab */}
+        <TabPanel value={tabValue} index={0}>
+          {pendingOnlyChanges.length === 0 ? (
+            <Box sx={{ py: 4, textAlign: 'center' }}>
+              <Typography color="textSecondary">
+                No pending changes at the moment
+              </Typography>
+            </Box>
+          ) : (
+            <Stack spacing={2} sx={{ p: 2 }}>
+              {pendingOnlyChanges.map((change) => (
+                <Box key={change.changeId} sx={{ position: 'relative' }}>
+                  {loadingChangeId === change.changeId && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1,
+                        borderRadius: 1,
+                      }}
+                    >
+                      <CircularProgress size={40} />
+                    </Box>
+                  )}
+                  <PendingChangeCard
+                    change={change}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                  />
+                </Box>
+              ))}
+            </Stack>
+          )}
+        </TabPanel>
+
+        {/* Approved Changes Tab */}
+        <TabPanel value={tabValue} index={1}>
+          {approvedChanges.length === 0 ? (
+            <Box sx={{ py: 4, textAlign: 'center' }}>
+              <Typography color="textSecondary">
+                No approved changes yet
+              </Typography>
+            </Box>
+          ) : (
+            <Stack spacing={2} sx={{ p: 2 }}>
+              {approvedChanges.map((change) => (
+                <PendingChangeCard key={change.changeId} change={change} />
+              ))}
+            </Stack>
+          )}
+        </TabPanel>
+
+        {/* Rejected Changes Tab */}
+        <TabPanel value={tabValue} index={2}>
+          {rejectedChanges.length === 0 ? (
+            <Box sx={{ py: 4, textAlign: 'center' }}>
+              <Typography color="textSecondary">
+                No rejected changes
+              </Typography>
+            </Box>
+          ) : (
+            <Stack spacing={2} sx={{ p: 2 }}>
+              {rejectedChanges.map((change) => (
+                <PendingChangeCard key={change.changeId} change={change} />
+              ))}
+            </Stack>
+          )}
+        </TabPanel>
       </Card>
 
       {/* Info Card */}
-      <Card sx={{ backgroundColor: '#e3f2fd', border: 'none', boxShadow: 0 }}>
-        <CardContent>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-            ℹ️ Pending Changes Review
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            Review and approve/reject pending changes to questions. This helps
-            maintain quality control over the question bank.
-          </Typography>
-        </CardContent>
-      </Card>
+      <Alert severity="info">
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          Review Pending Changes. Click on each card to expand and review details, compare versions, and approve or reject.
+        </Typography>
+      </Alert>
     </Box>
   );
 };
